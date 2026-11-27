@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkiWaxArctic — калькулятор смазки для лыж</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="snow-bg" id="snowBg"></div>
+
+  <div class="container">
+    
+    <!-- ПАНЕЛЬ НАВИГАЦИИ -->
+    <nav class="nav-bar">
+      <div class="nav-links">
+        <a href="#calcSection">📊 К расчёту</a>
+        <a href="#animSection">🎬 Анимация</a>
+        <a href="#chartsSection">📈 Графики</a>
+        <a href="#formulasSection">📐 Физика</a>
+        <a href="#waxCalcSection">🕯️ Парафин</a>
+      </div>
+      <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Переключить тему">
+        🌙
+      </button>
+    </nav>
+
+    <h1>❄️ SkiWaxArctic
+      <small>Расчёт скольжения · спортивный спуск · физика трения</small>
+    </h1>
+
+    <div class="mode-tabs">
+      <button id="tabLeisure" class="active" onclick="setMode('leisure')">⛷️ Прогулочная лыжня</button>
+      <button id="tabSport" onclick="setMode('sport')">🏆 Спортивный спуск</button>
+    </div>
+
+    <div class="grid" id="calcSection">
+      <div class="full">
+        <label>Тип смазки <span class="tooltip">ⓘ<span class="tooltiptext">Выберите парафин или мазь. От этого зависит коэффициент трения (μ).</span></span></label>
+        <select id="wax"></select>
+      </div>
+
+      <div>
+        <label>Температура снега <span class="tooltip">ⓘ<span class="tooltiptext">У разных смазок разный коэффициент трения при тёплом и холодном снеге.</span></span></label>
+        <select id="temp">
+          <option value="warm">Тёплый (0…−5°C)</option>
+          <option value="cold">Холодный (−5…−20°C)</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Масса лыжника (кг) <span class="tooltip">ⓘ<span class="tooltiptext">Влияет на силу трения и силу тяжести.</span></span></label>
+        <input id="mass" type="number" value="75" min="20" max="150">
+      </div>
+
+      <div id="leisureFields" class="full" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div>
+          <label>Тип лыжни</label>
+          <select id="track">
+            <option value="0">Ровная лыжня (0°)</option>
+            <option value="2" selected>Лёгкий спуск (2°)</option>
+            <option value="5">Средний спуск (5°)</option>
+            <option value="10">Крутой спуск (10°)</option>
+            <option value="-3">Подъём (−3°)</option>
+            <option value="-6">Крутой подъём (−6°)</option>
+          </select>
+        </div>
+        <div>
+          <label>Начальная скорость (м/с) <span class="tooltip">ⓘ<span class="tooltiptext">Скорость, с которой лыжник начинает движение (не менее 1 м/с).</span></span></label>
+          <input id="speed" type="number" value="4" step="0.5" min="1" max="15" required>
+        </div>
+        <div>
+          <label>Время наблюдения (сек)</label>
+          <input id="timeObs" type="number" value="10" min="1" max="60">
+        </div>
+      </div>
+
+      <div id="sportFields" class="full hidden" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="full">
+          <label>Спортивная трасса</label>
+          <select id="sportTrack"></select>
+        </div>
+        <div>
+          <label>Начальная скорость (м/с) <span class="tooltip">ⓘ<span class="tooltiptext">Скорость лыжника на входе в трассу.(не менее 1 м/с)</span></span></label>
+          <input id="sportSpeed" type="number" value="0" step="0.5" min="1" max="30" required>
+        </div>
+        <div>
+          <label>Время наблюдения (сек)</label>
+          <input id="sportTimeObs" type="number" value="40" min="1" max="500">
+        </div>
+        <div id="customAngleWrap" class="hidden">
+          <label>Угол спуска (°)</label>
+          <input id="customAngle" type="number" value="15" step="0.5" min="1" max="45">
+        </div>
+        <div id="customLengthWrap" class="hidden">
+          <label>Длина трассы (м)</label>
+          <input id="customLength" type="number" value="1000" step="50" min="50" max="5000">
+        </div>
+        <div id="trackInfo" class="track-info"></div>
+      </div>
+    </div>
+
+    <button onclick="calc()">❄️ Рассчитать и построить графики</button>
+
+    <div class="result" id="result"></div>
+
+    <h2 class="section" id="animSection">🎬 Анимация</h2>
+    <div class="chart-wrap">
+      <h3 id="animTitle">Лыжник движется по лыжне</h3>
+      <canvas id="chartAnim" width="840" height="320"></canvas>
+      <div class="anim-controls">
+        <button id="btnPlay" onclick="startAnimation()">▶ Запустить</button>
+        <button id="btnReset" class="secondary" onclick="resetAnimation()">↺ Сброс</button>
+        <div class="anim-stats">
+          <span>⏱ <b id="animTime">0.0</b> с</span>
+          <span>📏 <b id="animDist">0.0</b> м</span>
+          <span>⚡ <b id="animSpeed">0.00</b> м/с</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section" id="chartsSection">📈 Графики</h2>
+
+    <div class="chart-wrap">
+      <h3 id="chart1Title">1. Путь во времени</h3>
+      <canvas id="chart1" width="840" height="320"></canvas>
+    </div>
+
+    <div class="chart-wrap">
+      <h3 id="chart2Title">2. Скорость во времени</h3>
+      <canvas id="chart2" width="840" height="320"></canvas>
+    </div>
+
+    <div class="chart-wrap">
+      <h3 id="chart3Title">3. Сравнение смазок</h3>
+      <canvas id="chart3" width="840" height="420"></canvas>
+    </div>
+
+    <div class="formulas" id="formulasSection">
+      <div class="formulas-header" onclick="document.getElementById('formulasSection').classList.toggle('open')">
+        📐 Формулы и физика процесса
+      </div>
+      <div class="formulas-body">
+        <h4>1. Сила трения скольжения</h4>
+        <div class="formula" style="font-family: 'Times New Roman', Times, serif; font-size: 18px;">
+          <math display="inline" style="font-size: 1.2em;">
+            <msub><mi>F</mi><mrow><mi>тр</mi></mrow></msub>
+            <mo>=</mo>
+            <mi>μ</mi><mo>·</mo><mi>m</mi><mo>·</mo><mi>g</mi><mo>·</mo><mi>cos</mi><mo>&#x2061;</mo><mi>α</mi>
+          </math>
+          <span class="label" style="display: block; width: 100%; margin-top: 8px;">μ — коэффициент трения, m — масса, g ≈ 9.81 м/с², α — угол наклона</span>
+        </div>
+        <h4>2. Скатывающая сила (проекция силы тяжести)</h4>
+        <div class="formula" style="font-family: 'Times New Roman', Times, serif; font-size: 18px;">
+          <math display="inline" style="font-size: 1.2em;">
+            <msub><mi>F</mi><mrow><mi>ск</mi></mrow></msub>
+            <mo>=</mo>
+            <mi>m</mi><mo>·</mo><mi>g</mi><mo>·</mo><mi>sin</mi><mo>&#x2061;</mo><mi>α</mi>
+          </math>
+          <span class="label" style="display: block; width: 100%; margin-top: 8px;">Тянет лыжника вниз по склону</span>
+        </div>
+        <h4>3. Сила сопротивления воздуха</h4>
+        <div class="formula" style="font-family: 'Times New Roman', Times, serif; font-size: 18px;">
+          <math display="inline" style="font-size: 1.2em;">
+            <msub><mi>F</mi><mrow><mi>возд</mi></mrow></msub>
+            <mo>=</mo>
+            <mfrac><mn>1</mn><mn>2</mn></mfrac>
+            <mo>·</mo><mi>ρ</mi><mo>·</mo>
+            <msub><mi>C</mi><mi>x</mi></msub>
+            <mo>·</mo><mi>S</mi><mo>·</mo>
+            <msup><mi>v</mi><mn>2</mn></msup>
+          </math>
+          <span class="label" style="display: block; width: 100%; margin-top: 8px;">ρ = 1.225 кг/м³ — плотность воздуха</span>
+        </div>
+        <h4>4. Второй закон Ньютона</h4>
+        <div class="formula" style="font-family: 'Times New Roman', Times, serif; font-size: 18px;">
+          <math display="inline" style="font-size: 1.2em;">
+            <mi>a</mi>
+            <mo>=</mo>
+            <mfrac>
+              <mrow>
+                <msub><mi>F</mi><mrow><mi>ск</mi></mrow></msub>
+                <mo>−</mo>
+                <msub><mi>F</mi><mrow><mi>тр</mi></mrow></msub>
+                <mo>−</mo>
+                <msub><mi>F</mi><mrow><mi>возд</mi></mrow></msub>
+              </mrow>
+              <mi>m</mi>
+            </mfrac>
+          </math>
+          <span class="label" style="display: block; width: 100%; margin-top: 8px;">Если a > 0 — разгон, если a < 0 — торможение</span>
+        </div>
+        <h4>5. Путь до остановки</h4>
+        <div class="formula" style="font-family: 'Times New Roman', Times, serif; font-size: 18px;">
+          <math display="inline" style="font-size: 1.2em;">
+            <mi>S</mi>
+            <mo>=</mo>
+            <mfrac>
+              <msubsup><mi>v</mi><mn>0</mn><mn>2</mn></msubsup>
+              <mrow>
+                <mn>2</mn>
+                <mo>·</mo>
+                <mo>|</mo><mi>a</mi><mo>|</mo>
+              </mrow>
+            </mfrac>
+          </math>
+          <span class="label" style="display: block; width: 100%; margin-top: 8px;">Кинематика равнозамедленного движения</span>
+        </div>
+        <h4>6. Предельная скорость на спуске</h4>
+        <div class="formula" style="font-family: 'Times New Roman', Times, serif; font-size: 18px;">
+          <math display="inline" style="font-size: 1.2em;">
+            <msub>
+              <mi>v</mi>
+              <mrow><mi>max</mi></mrow>
+            </msub>
+            <mo>=</mo>
+            <msqrt>
+              <mfrac>
+                <mrow>
+                  <msub><mi>F</mi><mrow><mi>ск</mi></mrow></msub>
+                  <mo>−</mo>
+                  <msub><mi>F</mi><mrow><mi>тр</mi></mrow></msub>
+                </mrow>
+                <mrow>
+                  <mfrac><mn>1</mn><mn>2</mn></mfrac>
+                  <mo>·</mo>
+                  <mi>ρ</mi>
+                  <mo>·</mo>
+                  <msub><mi>C</mi><mi>x</mi></msub>
+                  <mo>·</mo>
+                  <mi>S</mi>
+                </mrow>
+              </mfrac>
+            </msqrt>
+          </math>
+          <span class="label" style="display: block; width: 100%; margin-top: 8px;">Скорость, при которой воздух уравновешивает разгон</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- МИНИ-КАЛЬКУЛЯТОР ПАРАФИНА -->
+    <h2 class="section" id="waxCalcSection">🕯️ Калькулятор парафина</h2>
+    <div class="wax-calculator" id="waxCalculator">
+      <p class="wax-calc-intro">Сколько граммов парафина нужно на одну тренировку или соревнование? Расчёт автоматически обновляется при выборе смазки и изменении длины лыж.</p>
+      
+      <div class="wax-calc-grid">
+        <div>
+          <label>Длина лыж (см)</label>
+          <input type="number" id="skiLength" value="180" min="100" max="220" step="5" oninput="updateWaxCalc()">
+        </div>
+        <div>
+          <label>Интенсивность</label>
+          <select id="waxIntensity" onchange="updateWaxCalc()">
+            <option value="training">Тренировка (1 слой)</option>
+            <option value="race" selected>Соревнование (2–3 слоя)</option>
+            <option value="pro">Профи (4+ слоёв, с порошком)</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="calcWax()" class="wax-calc-btn">Рассчитать парафин</button>
+
+      <div class="wax-calc-result" id="waxCalcResult"></div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+      <p>© 2026 SkiWax Arctic · Сделано с 💖 для лыжников</p>
+      <div class="footer-links">
+        <a href="#" onclick="event.preventDefault(); openAbout();">О проекте</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- КНОПКА НАВЕРХ -->
+  <button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="Наверх">↑</button>
+
+  <!-- МОДАЛЬНОЕ ОКНО «О ПРОЕКТЕ» -->
+  <div class="modal-overlay" id="aboutModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeAbout()">✕</button>
+      <h2>🧣 О проекте SkiWaxArctic</h2>
+      <p>Этот сайт создан для того, чтобы помочь лыжникам и тренерам наглядно понять, как работают смазки для лыж в разных условиях.</p>
+      <p>В основе расчётов лежит честная физика: второй закон Ньютона, сила трения, скатывающая сила и сопротивление воздуха. Вы можете сравнить разные типы смазок, посмотреть графики разгона и рассчитать время прохождения реальных спортивных трасс.</p>
+      <p><b>Что умеет сайт:</b></p>
+      <ul>
+        <li>Считать скорость и путь при разных смазках.</li>
+        <li>Строить графики пути и скорости во времени.</li>
+        <li>Визуализировать спуск лыжника в анимации.</li>
+        <li>Показывать формулы, по которым идут расчёты.</li>
+        <li>Сравнивать спортивные трассы Кубка мира.</li>
+      </ul>
+      <p>Проект сделан с любовью к лыжному спорту и физике🤍. Если у вас есть идеи по улучшению — мы всегда рады!</p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
